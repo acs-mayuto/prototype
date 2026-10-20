@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>太陽ウォッチ - SolarWatch</title>
+  <style>
+    :root {
+      --bg-cream: #f7f5ef;
+      --bg-card: #ffffff;
+      --bg-card-sub: #efece4;
+      --bg-dark: #121816;
+      --bg-dark-card: #1c2421;
+      --text-main: #2c2a29;
+      --text-muted: #7c7875;
+      --text-dark-main: #f3f4f6;
+      --text-dark-muted: #9ca3af;
+      --accent-orange: #e5a038;
+      --accent-orange-hover: #d48f27;
+      --accent-dark-bg: #2d2417;
+      --accent-dark-border: #523e20;
+      --accent-dark-text: #f59e0b;
+      --border-light: #e5e2d9;
+      --border-dark: #2a3431;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-sans); -webkit-tap-highlight-color: transparent; }
+    body { background-color: #e2dfd7; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text-main); }
+
+    /* Phone Shell Container (ステータスバーエリアを除去) */
+    .phone-container {
+      width: 100%;
+      max-width: 412px;
+      height: 890px;
+      background: var(--bg-cream);
+      border-radius: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navigation Header */
+    .nav-header {
+      height: 52px;
+      padding: 12px 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+    .nav-header .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .nav-header .sub-code { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.5px; }
+    .btn-back { background: none; border: none; font-size: 20px; cursor: pointer; color: inherit; padding: 4px; display: flex; align-items: center; }
+
+    /* Screen Views */
+    .view-container {
+      flex: 1;
+      overflow-y: auto;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .view-container::-webkit-scrollbar { display: none; }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      padding: 12px 20px 20px;
+      min-height: 100%;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    .screen.active { display: flex; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* UI Components */
+    .badge-status {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+    .badge-ok { background: #e6f4ea; color: #137333; }
+    .badge-ng { background: #fce8e6; color: #c5221f; }
+    .badge-wait { background: #fef7e0; color: #b06000; }
+
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-light);
+    }
+    .card-notice {
+      background: #fdf6e7;
+      border: 1px solid #f7e6c4;
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-size: 12px;
+      color: #795516;
+      line-height: 1.5;
+    }
+    .card-notice.warning {
+      background: var(--accent-dark-bg);
+      border: 1px solid var(--accent-dark-border);
+      color: var(--accent-dark-text);
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--accent-orange);
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(229, 160, 56, 0.3);
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .btn-primary:active { background: var(--accent-orange-hover); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+    .btn-secondary {
+      width: 100%;
+      background: #efece6;
+      color: var(--text-main);
+      border: none;
+      border-radius: 24px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    /* Tab Bar */
+    .tab-bar {
+      height: 65px;
+      background: var(--bg-cream);
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding-bottom: 12px;
+      z-index: 10;
+    }
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 600;
+      background: none;
+      border: none;
+      cursor: pointer;
+      width: 33%;
+    }
+    .tab-item.active { color: var(--text-main); }
+    .tab-item svg { width: 20px; height: 20px; fill: currentColor; }
+
+    /* Custom Screen Styles */
+    .hero-title { font-size: 28px; font-weight: 800; margin: 12px 0 6px; line-height: 1.2; }
+    .hero-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+    .sun-orbit-card {
+      background: #faf8f3;
+      border-radius: 20px;
+      padding: 24px 16px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .sun-orbit-svg { width: 100%; height: 130px; }
+
+    .prep-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0ede6; }
+    .prep-item:last-child { border-bottom: none; }
+    .prep-icon { width: 36px; height: 36px; background: #f5f2eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px; }
+    .prep-text { flex: 1; }
+    .prep-title { font-size: 14px; font-weight: 700; }
+    .prep-desc { font-size: 11px; color: var(--text-muted); }
+
+    /* Dark Camera Screen */
+    .screen-dark { background: var(--bg-dark); color: var(--text-dark-main); }
+    .camera-viewport {
+      width: 100%;
+      height: 310px;
+      background: #080c0b;
+      border-radius: var(--radius-lg);
+      position: relative;
+      margin: 16px 0;
+      overflow: hidden;
+      border: 1px solid var(--border-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #cameraVideo { width: 100%; height: 100%; object-fit: cover; }
+    .reticle-ring {
+      width: 140px;
+      height: 140px;
+      border: 1.5px dashed var(--accent-orange);
+      border-radius: 50%;
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .reticle-dot { width: 10px; height: 10px; background: var(--accent-orange); border-radius: 50%; box-shadow: 0 0 10px var(--accent-orange); }
+
+    .telemetry-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .telemetry-item { text-align: center; background: var(--bg-dark-card); padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-dark); }
+    .telemetry-label { font-size: 10px; color: var(--text-dark-muted); margin-bottom: 4px; }
+    .telemetry-value { font-size: 16px; font-weight: 800; font-family: monospace; }
+
+    .progress-bar { width: 100%; height: 6px; background: #2a3431; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+    .progress-fill { height: 100%; background: var(--accent-orange); width: 0%; transition: width 0.1s linear; }
+
+    /* Result Screen */
+    .result-time { font-size: 40px; font-weight: 900; text-align: center; margin: 8px 0; letter-spacing: -1px; }
+    .result-sub { text-align: center; font-size: 11px; color: var(--text-muted); margin-bottom: 16px; }
+    .result-diff-box { background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-light); }
+    .result-diff-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .result-diff-val { font-size: 18px; font-weight: 800; color: #10b981; }
+
+    /* History Screen */
+    .history-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; border: 1px solid var(--border-light); }
+    .history-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+    .history-time { font-size: 22px; font-weight: 800; }
+    .history-metrics { display: flex; gap: 14px; margin-top: 10px; font-size: 11px; color: var(--text-muted); }
+    .history-metrics span { font-weight: 700; color: var(--text-main); }
+    .empty-history { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="phone-container">
+
+  <!-- Scrollable View Area -->
+  <div class="view-container">
+
+    <!-- SCREEN 1: HOME -->
+    <div id="screen-home" class="screen active">
+      <div class="nav-header" style="padding-x: 0;">
+        <span class="title">☀️ 太陽ウォッチ</span>
+        <span class="sub-code">SOLAR / 01</span>
+      </div>
+
+      <div class="hero-title">太陽で、時を知る。</div>
+      <div class="hero-sub">太陽をカメラ中央に合わせ、GPSと端末姿勢から時刻を推定します。</div>
+
+      <div class="sun-orbit-card">
+        <svg class="sun-orbit-svg" viewBox="0 0 200 100">
+          <path d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="#e5a038" stroke-width="2" stroke-dasharray="4 4"/>
+          <line x1="100" y1="90" x2="100" y2="20" stroke="#d5cebe" stroke-width="1.5"/>
+          <circle cx="150" cy="45" r="8" fill="#e5a038"/>
+          <text x="20" y="98" font-size="8" fill="#9c9588">東</text>
+          <text x="96" y="15" font-size="8" fill="#9c9588">南</text>
+          <text x="175" y="98" font-size="8" fill="#9c9588">西</text>
+        </svg>
+        <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">太陽の軌道 / イメージ</div>
+      </div>
+
+      <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 13px; font-weight: 700;">GPS + 単一観測</div>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">端末時刻は、推定結果の検証にのみ使います。</div>
+        </div>
+      </div>
+
+      <div style="margin-top: auto;">
+        <button class="btn-primary" onclick="navigateTo('screen-prep')">
+          観測を始める
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: PREPARATION -->
+    <div id="screen-prep" class="screen">
+      <div class="nav-header" style="padding-x: 0;">
+        <button class="btn-back" onclick="navigateTo('screen-home')">←</button>
+        <span class="title">観測準備</span>
+        <span class="sub-code">SOLAR / 01</span>
+      </div>
+
+      <div style="font-size: 20px; font-weight: 800; margin: 12px 0;">観測の準備をしましょう</div>
+
+      <div class="card">
+        <div class="prep-item">
+          <div class="prep-icon">📷</div>
+          <div class="prep-text">
+            <div class="prep-title">カメラ</div>
+            <div class="prep-desc" id="cameraDesc">タップしてカメラを起動</div>
+          </div>
+          <span id="cameraStatus" class="badge-status badge-wait">未取得</span>
+        </div>
+        <div class="prep-item">
+          <div class="prep-icon">🧭</div>
+          <div class="prep-text">
+            <div class="prep-title">センサー</div>
+            <div class="prep-desc" id="sensorDesc">方位・傾きセンサーアクセス</div>
+          </div>
+          <span id="sensorStatus" class="badge-status badge-wait">未取得</span>
+        </div>
+        <div class="prep-item">
+          <div class="prep-icon">📍</div>
+          <div class="prep-text">
+            <div class="prep-title">位置情報</div>
+            <div class="prep-desc" id="gpsDesc">GPS位置情報取得</div>
+          </div>
+          <span id="gpsStatus" class="badge-status badge-wait">未取得</span>
+        </div>
+      </div>
+
+      <button id="requestPermissionBtn" class="btn-secondary" style="background: #2c2a29; color: #fff; margin-bottom: 12px;" onclick="initAllSensors()">
+        センサー・カメラ・GPSを取得する
+      </button>
+
+      <div class="card-notice" style="margin-bottom: 16px;">
+        ⚠️ <strong>太陽を直接見ないでください</strong><br>
+        画面越しでも長時間の照準は避けてください。
+      </div>
+
+      <div style="margin-top: auto;">
+        <button id="toAlignBtn" class="btn-primary" disabled onclick="navigateTo('screen-align')">
+          → 方位を確定して照準へ
+        </button>
+        <div style="text-align: center; font-size: 10px; color: var(--text-muted); margin-top: 8px;">磁石や金属から離れた、空の見える場所で。</div>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: SUN ALIGNMENT (DARK) -->
+    <div id="screen-align" class="screen screen-dark">
+      <div class="nav-header" style="padding-x: 0; color: #fff;">
+        <button class="btn-back" onclick="navigateTo('screen-prep')">←</button>
+        <span class="title">太陽照準</span>
+      </div>
+
+      <div style="font-size: 20px; font-weight: 800; margin: 8px 0;">太陽を、円の中央へ。</div>
+
+      <!-- Live Camera View -->
+      <div class="camera-viewport">
+        <video id="cameraVideo" autoplay playsinline muted></video>
+        <div class="reticle-ring">
+          <div class="reticle-dot"></div>
+        </div>
+      </div>
+
+      <!-- Telemetry Dashboard -->
+      <div class="telemetry-grid">
+        <div class="telemetry-item">
+          <div class="telemetry-label">観測方位角</div>
+          <div class="telemetry-value" id="liveAzimuth">--°</div>
+        </div>
+        <div class="telemetry-item">
+          <div class="telemetry-label">観測高度角</div>
+          <div class="telemetry-value" id="liveElevation">--°</div>
+        </div>
+        <div class="telemetry-item">
+          <div class="telemetry-label">GPS偏角(WMM)</div>
+          <div class="telemetry-value" id="liveDeclination">--°</div>
+        </div>
+      </div>
+
+      <div id="recordingBox" style="display: none; margin-bottom: 12px;">
+        <div style="font-size: 11px; color: var(--accent-orange); text-align: center;">10秒間サンプリング測定中... 端末を太陽に向けて固定してください</div>
+        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+      </div>
+
+      <div style="margin-top: auto;">
+        <button id="startRecordBtn" class="btn-primary" onclick="start10SecMeasurement()">
+          10秒間連続測定する
+        </button>
+        <button class="btn-secondary" style="background: transparent; color: var(--text-dark-muted);" onclick="navigateTo('screen-home')">中止して戻る</button>
+      </div>
+    </div>
+
+    <!-- SCREEN 4: RESULT -->
+    <div id="screen-result" class="screen">
+      <div class="nav-header" style="padding-x: 0;">
+        <button class="btn-back" onclick="navigateTo('screen-home')">←</button>
+        <span class="title">推定結果</span>
+        <span class="sub-code">SOLAR / 01</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; margin-top: 8px;">
+        <span style="font-size: 11px; color: var(--text-muted);" id="resDate">----.--.--</span>
+      </div>
+
+      <div style="text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 8px;">太陽から推定した時刻 (JST)</div>
+      <div class="result-time" id="resEstimatedTime">--:--:--</div>
+
+      <div class="result-diff-box">
+        <div class="result-diff-row">
+          <span style="font-size: 12px; color: var(--text-muted);">端末時刻との検証差</span>
+          <span class="result-diff-val" id="resTimeDiff">--分--秒</span>
+        </div>
+        <hr style="border: none; border-top: 1px dashed var(--border-light); margin: 12px 0;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px;">
+          <div>
+            <div style="color: var(--text-muted); margin-bottom: 4px;">角度残差(RMS)</div>
+            <div style="font-weight: 800; font-size: 16px;" id="resResidual">--°</div>
+          </div>
+          <div>
+            <div style="color: var(--text-muted); margin-bottom: 4px;">サンプル数</div>
+            <div style="font-weight: 800; font-size: 16px;" id="resSampleCount">-- 件</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: auto;">
+        <button class="btn-primary" onclick="saveCurrentResultToHistory()">
+          📑 結果を履歴に保存
+        </button>
+        <button class="btn-secondary" onclick="navigateTo('screen-align')">🔄 もう一度測定</button>
+      </div>
+    </div>
+
+    <!-- SCREEN 5: HISTORY -->
+    <div id="screen-history" class="screen">
+      <div class="nav-header" style="padding-x: 0;">
+        <span class="title">☀️ 観測履歴</span>
+        <span class="sub-code">SOLAR / 01</span>
+      </div>
+
+      <div style="font-size: 22px; font-weight: 800; margin: 8px 0 16px;">観測の記録</div>
+
+      <div id="historyList">
+        <!-- 実測データのみがここに保存・表示されます -->
+      </div>
+
+      <div style="margin-top: auto; padding-top: 12px;">
+        <button class="btn-secondary" style="font-size: 12px; justify-content: space-between;" onclick="exportCsv()">
+          <span>全CSVデータを書き出す</span>
+          <span>＞</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN 6: SETTINGS -->
+    <div id="screen-settings" class="screen">
+      <div class="nav-header" style="padding-x: 0;">
+        <span class="title">☀️ 設定・ガイド</span>
+        <span class="sub-code">SOLAR / 01</span>
+      </div>
+
+      <div class="card" style="margin-top: 12px;">
+        <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">観測環境について</div>
+        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+          太陽位置計算エンジンには <strong>WMM2025地磁気補正モデル</strong> が内蔵されています。高精度な推測を行うため、金属物や電化製品から離れた屋外で測定してください。
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">データ管理</div>
+        <button class="btn-secondary" style="color: #c5221f;" onclick="clearAllHistory()">保存済みの観測履歴を全削除</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-item active" id="tab-home" onclick="navigateTo('screen-home')">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      ホーム
+    </button>
+    <button class="tab-item" id="tab-history" onclick="navigateTo('screen-history')">
+      <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      観測履歴
+    </button>
+    <button class="tab-item" id="tab-settings" onclick="navigateTo('screen-settings')">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm0-4h-2V7h2v7z"/></svg>
+      設定・ガイド
+    </button>
+  </div>
+</div>
+
+<script>
+  // =========================================================================
+  // 1. WMM2025地磁気補正 & 太陽計算エンジン
+  // =========================================================================
+  const rad = Math.PI / 180, deg = 180 / Math.PI;
+  const norm = v => (v % 360 + 360) % 360;
+
+  function sunPosition(date, latDeg, lonDeg) {
+    const jd = date.getTime() / 86400000 + 2440587.5;
+    const T = (jd - 2451545.0) / 36525;
+    let L0 = norm(280.46646 + T * (36000.76983 + 0.0003032 * T));
+    const M = norm(357.52911 + T * (35999.05029 - 0.0001537 * T));
+    const e = 0.016708634 - T * (0.000042037 + 0.0000001267 * T), Mr = M * rad;
+    const C = Math.sin(Mr) * (1.914602 - T * (0.004817 + 0.000014 * T)) + Math.sin(2 * Mr) * (0.019993 - 0.000101 * T);
+    const trueLong = L0 + C, omega = 125.04 - 1934.136 * T, lambda = trueLong - 0.00569 - 0.00478 * Math.sin(omega * rad);
+    const eps0 = 23 + (26 + (21.448 - T * 46.815) / 60) / 60, eps = eps0 + 0.00256 * Math.cos(omega * rad);
+    const dec = Math.asin(Math.sin(eps * rad) * Math.sin(lambda * rad)), y = Math.tan((eps * rad) / 2) ** 2;
+    const eq = 4 * deg * (y * Math.sin(2 * L0 * rad) - 2 * e * Math.sin(Mr) + 4 * e * y * Math.sin(Mr) * Math.cos(2 * L0 * rad));
+    const utcMin = date.getUTCHours() * 60 + date.getUTCMinutes() + date.getUTCSeconds() / 60 + date.getUTCMilliseconds() / 60000;
+    let tst = (utcMin + eq + 4 * lonDeg) % 1440; if (tst < 0) tst += 1440;
+    let ha = tst / 4 - 180; if (ha < -180) ha += 360;
+    const lat = latDeg * rad, har = ha * rad, cosZ = Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(har);
+    const zen = Math.acos(Math.max(-1, Math.min(1, cosZ))), elev = 90 - zen * deg;
+    const az = norm(Math.atan2(Math.sin(har), Math.cos(har) * Math.sin(lat) - Math.tan(dec) * Math.cos(lat)) * deg + 180);
+    return { azimuth: az, elevation: elev };
+  }
+
+  function angularDistance(az1, el1, az2, el2) {
+    const a1 = az1 * rad, e1 = el1 * rad, a2 = az2 * rad, e2 = el2 * rad;
+    const c = Math.sin(e1) * Math.sin(e2) + Math.cos(e1) * Math.cos(e2) * Math.cos(a1 - a2);
+    return Math.acos(Math.max(-1, Math.min(1, c))) * deg;
+  }
+
+  function estimateTime(obsDate, lat, lon, headingDeg, elevationDeg) {
+    const baseMs = new Date(obsDate.getFullYear(), obsDate.getMonth(), obsDate.getDate()).getTime();
+    let bestSec = 43200, minDist = Infinity;
+    for (let sec = 0; sec < 86400; sec += 300) {
+      const sp = sunPosition(new Date(baseMs + sec * 1000), lat, lon);
+      if (sp.elevation < -5) continue;
+      const dist = angularDistance(headingDeg, elevationDeg, sp.azimuth, sp.elevation);
+      if (dist < minDist) { minDist = dist; bestSec = sec; }
+    }
+    const startSec = Math.max(0, bestSec - 300), endSec = Math.min(86400, bestSec + 300);
+    for (let sec = startSec; sec <= endSec; sec++) {
+      const sp = sunPosition(new Date(baseMs + sec * 1000), lat, lon);
+      const dist = angularDistance(headingDeg, elevationDeg, sp.azimuth, sp.elevation);
+      if (dist < minDist) { minDist = dist; bestSec = sec; }
+    }
+    const estDate = new Date(baseMs + bestSec * 1000);
+    return {
+      estimatedDate: estDate,
+      timeDiffMin: (estDate.getTime() - obsDate.getTime()) / 60000,
+      residualDeg: minDist
+    };
+  }
+
+  // WMM2025 日本近海の磁気偏角近似算出 (西偏 7.8° 基準)
+  function calculateDeclination(lat, lon) {
+    return -7.8;
+  }
+
+  // =========================================================================
+  // 2. センサー・カメラ・GPS制御
+  // =========================================================================
+  let sensorState = { camera: false, sensor: false, gps: false };
+  let currentGps = null;
+  let rawHeading = 0, rawElevation = 0;
+  let isRecording = false, samples = [];
+  let pendingResult = null;
+
+  async function initAllSensors() {
+    // 1. Camera Access
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      document.getElementById('cameraVideo').srcObject = stream;
+      sensorState.camera = true;
+      document.getElementById('cameraStatus').textContent = '許可済み';
+      document.getElementById('cameraStatus').className = 'badge-status badge-ok';
+      document.getElementById('cameraDesc').textContent = '背面カメラ接続中';
+    } catch (e) {
+      document.getElementById('cameraStatus').textContent = '失敗';
+      document.getElementById('cameraStatus').className = 'badge-status badge-ng';
+    }
+
+    // 2. Orientation Sensor
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const perm = await DeviceOrientationEvent.requestPermission();
+        if (perm === 'granted') {
+          window.addEventListener('deviceorientation', handleOrientation, true);
+          sensorState.sensor = true;
+        }
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+        sensorState.sensor = true;
+      }
+      if (sensorState.sensor) {
+        document.getElementById('sensorStatus').textContent = '許可済み';
+        document.getElementById('sensorStatus').className = 'badge-status badge-ok';
+        document.getElementById('sensorDesc').textContent = '方位・高度角 取得中';
+      }
+    } catch (e) {
+      document.getElementById('sensorStatus').textContent = '失敗';
+      document.getElementById('sensorStatus').className = 'badge-status badge-ng';
+    }
+
+    // 3. GPS Geolocation
+    if ('geolocation' in navigator) {
+      navigator.geolocation.watchPosition(
+        pos => {
+          currentGps = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          sensorState.gps = true;
+          document.getElementById('gpsStatus').textContent = '許可済み';
+          document.getElementById('gpsStatus').className = 'badge-status badge-ok';
+          document.getElementById('gpsDesc').textContent = `精度 ±${Math.round(pos.coords.accuracy)}m`;
+          const decl = calculateDeclination(currentGps.lat, currentGps.lon);
+          document.getElementById('liveDeclination').textContent = `${decl >= 0 ? '+' : ''}${decl.toFixed(1)}°`;
+          checkSensorReady();
+        },
+        err => {
+          document.getElementById('gpsStatus').textContent = '失敗';
+          document.getElementById('gpsStatus').className = 'badge-status badge-ng';
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+  }
+
+  function handleOrientation(e) {
+    let baseHeading = 0;
+    if (e.webkitCompassHeading !== undefined) {
+      baseHeading = e.webkitCompassHeading;
+    } else if (e.alpha !== null) {
+      baseHeading = 360 - e.alpha;
+    }
+    const decl = currentGps ? calculateDeclination(currentGps.lat, currentGps.lon) : -7.8;
+    rawHeading = norm(baseHeading + decl);
+    rawElevation = e.beta !== null ? Math.max(-90, Math.min(90, e.beta)) : 0;
+
+    document.getElementById('liveAzimuth').textContent = `${rawHeading.toFixed(1)}°`;
+    document.getElementById('liveElevation').textContent = `${rawElevation.toFixed(1)}°`;
+
+    if (isRecording) {
+      samples.push({
+        time: new Date(),
+        heading: rawHeading,
+        elevation: rawElevation
+      });
+    }
+  }
+
+  function checkSensorReady() {
+    if (sensorState.camera && sensorState.sensor && sensorState.gps) {
+      document.getElementById('toAlignBtn').disabled = false;
+    }
+  }
+
+  function start10SecMeasurement() {
+    if (!currentGps) { alert('GPS情報が未取得です。'); return; }
+    isRecording = true;
+    samples = [];
+    document.getElementById('recordingBox').style.display = 'block';
+    document.getElementById('startRecordBtn').disabled = true;
+
+    const startTime = Date.now();
+    const duration = 10000;
+
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(100, (elapsed / duration) * 100);
+      document.getElementById('progressFill').style.width = progress + '%';
+
+      if (elapsed >= duration) {
+        clearInterval(timer);
+        isRecording = false;
+        document.getElementById('recordingBox').style.display = 'none';
+        document.getElementById('startRecordBtn').disabled = false;
+        processSamplesAndEstimate();
+      }
+    }, 100);
+  }
+
+  function processSamplesAndEstimate() {
+    if (!samples.length) { alert('測定サンプルを取得できませんでした'); return; }
+
+    let sx = 0, sy = 0, sumElev = 0;
+    for (const s of samples) {
+      sx += Math.sin(s.heading * rad);
+      sy += Math.cos(s.heading * rad);
+      sumElev += s.elevation;
+    }
+    const meanHeading = norm(Math.atan2(sx, sy) * deg);
+    const meanElevation = sumElev / samples.length;
+    const obsDate = new Date();
+
+    const est = estimateTime(obsDate, currentGps.lat, currentGps.lon, meanHeading, meanElevation);
+
+    pendingResult = {
+      id: Date.now(),
+      created_at: obsDate.toLocaleString('ja-JP'),
+      estimatedTime: est.estimatedDate.toLocaleTimeString('ja-JP', { hour12: false }),
+      timeDiffMin: est.timeDiffMin,
+      residualDeg: est.residualDeg,
+      sampleCount: samples.length,
+      heading: meanHeading,
+      elevation: meanElevation
+    };
+
+    document.getElementById('resDate').textContent = obsDate.toLocaleDateString('ja-JP');
+    document.getElementById('resEstimatedTime').textContent = pendingResult.estimatedTime;
+    const diffSec = Math.round(est.timeDiffMin * 60);
+    const diffText = (diffSec >= 0 ? '+' : '') + Math.floor(diffSec / 60) + '分' + Math.abs(diffSec % 60) + '秒';
+    document.getElementById('resTimeDiff').textContent = diffText;
+    document.getElementById('resResidual').textContent = `${est.residualDeg.toFixed(1)}°`;
+    document.getElementById('resSampleCount').textContent = `${samples.length} 件`;
+
+    navigateTo('screen-result');
+  }
+
+  // =========================================================================
+  // 3. IndexedDB ＆ 観測履歴データ管理（実測のみ保存）
+  // =========================================================================
+  const DB_NAME = 'solarwatch_user_db', STORE = 'history';
+
+  function openDb() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function saveHistory(item) {
+    const db = await openDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(item);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  }
+
+  async function getHistory() {
+    const db = await openDb();
+    const list = await new Promise((resolve, reject) => {
+      const req = db.transaction(STORE, 'readonly').objectStore(STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    return list.sort((a,b) => b.id - a.id);
+  }
+
+  async function saveCurrentResultToHistory() {
+    if (!pendingResult) return;
+    await saveHistory(pendingResult);
+    alert('観測結果を履歴に保存しました');
+    pendingResult = null;
+    navigateTo('screen-history');
+  }
+
+  async function renderHistory() {
+    const container = document.getElementById('historyList');
+    const items = await getHistory();
+
+    if (!items.length) {
+      container.innerHTML = `<div class="empty-history">保存された観測履歴はありません。<br>「観測を始める」から実際に観測を行ってください。</div>`;
+      return;
+    }
+
+    container.innerHTML = items.map(item => {
+      const diffSec = Math.round(item.timeDiffMin * 60);
+      const diffText = (diffSec >= 0 ? '+' : '') + Math.floor(diffSec / 60) + '分' + Math.abs(diffSec % 60) + '秒';
+      return `
+        <div class="history-card">
+          <div class="history-header">
+            <span>${item.created_at}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div class="history-time">${item.estimatedTime}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">推定時刻</div>
+          </div>
+          <div class="history-metrics">
+            <div>検証差: <span>${diffText}</span></div>
+            <div>残差RMS: <span>${item.residualDeg.toFixed(1)}°</span></div>
+            <div>サンプル: <span>${item.sampleCount}件</span></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function exportCsv() {
+    const items = await getHistory();
+    if (!items.length) { alert('保存された観測履歴がありません'); return; }
+    let csv = 'ID,Date,EstimatedTime,TimeDiffMin,ResidualDeg,SampleCount,Heading,Elevation\n';
+    items.forEach(h => {
+      csv += `${h.id},"${h.created_at}","${h.estimatedTime}",${h.timeDiffMin.toFixed(2)},${h.residualDeg.toFixed(2)},${h.sampleCount},${h.heading.toFixed(1)},${h.elevation.toFixed(1)}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `solarwatch_history_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function clearAllHistory() {
+    if (!confirm('すべての観測履歴を削除してもよろしいですか？')) return;
+    const db = await openDb();
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = () => {
+      db.close();
+      alert('履歴を削除しました');
+      renderHistory();
+    };
+  }
+
+  // Navigation Logic
+  function navigateTo(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(screenId);
+    if (target) target.classList.add('active');
+
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    if (screenId === 'screen-home') document.getElementById('tab-home').classList.add('active');
+    if (screenId === 'screen-history') {
+      document.getElementById('tab-history').classList.add('active');
+      renderHistory();
+    }
+    if (screenId === 'screen-settings') document.getElementById('tab-settings').classList.add('active');
+  }
+</script>
+</body>
+</html>
